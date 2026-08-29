@@ -1,0 +1,117 @@
+# sandbox
+
+Local claude session sandbox.
+
+{{ renderMarkdown "assets/docs-agents/purpose.md" "normalize-headings" }}
+
+## Layout
+
+- `ci/k8s/kind.yml` — two-node kind cluster config (control-plane + worker), cluster name `sandbox`, `disableDefaultCNI` (Cilium is the CNI); session pods run on the worker (`sandbox.role: session`).
+- `ci/k8s/limits.yml` — namespace `ResourceQuota` and `LimitRange`: low default requests, a high per-pod ceiling, sized against the podman VM rather than the host.
+- `ci/k8s/session.yml` — one StatefulSet per session (`replicas: 1`), its own PVC mounted at `/home/ko`, `${SESSION}` env-substituted at apply time.
+- `ci/k8s/netpol.yml` — namespace default-deny, the FQDN allowlist, and an explicit host deny.
+- `ci/docker/Dockerfile.{base,installs,config}` — the three image layers.
+- `ci/zsh/scripts/` — zsh wrappers behind the Makefile targets.
+- `ci/zsh/tests/e2e.zsh` — the host e2e test.
+
+## Container provider
+
+Podman, not docker: no docker daemon is involved. The machine runs **rootful**
+(`machine-up.zsh` enforces it) because Cilium's eBPF datapath mounts
+`/sys/fs/bpf` and writes `/etc/sysctl.d`, which a rootless container cannot do —
+even with `--privileged`, since its user namespace never held `CAP_SYS_ADMIN`
+over the host kernel. Node containers being root is confined to the podman VM,
+never the developer's machine. Session pods are unprivileged regardless:
+`runAsUser: 1000`, `runAsNonRoot`, every capability dropped.
+
+## Image
+
+Three layers, ordered by how often they change, each built on the host and
+pushed to the host-local registry so only changed layers upload:
+
+- **base** (`image-build-base`) — debian slim, zsh, tmux, vim, the `ko` user with
+  passwordless sudo and root-group membership, and che. Changes rarely.
+- **installs** (`image-build-installs`) — `che run --skip-ops` everything but
+  `install-packages`. Slow, changes rarely.
+- **config** (`image-build-config`) — `che run --skip-ops install-packages`:
+  links, dirs, rendered templates and scripts, plus the workspace clone and the
+  claude, gcp and gitlab credentials. Fast, changes often.
+
+Profiles come from `configs` as remote refs (`ci/docker/che.yml`), never a
+vendored copy: the sandbox owns which profiles apply, configs owns what each
+does. CI builds neither image — it dry-runs the profiles instead.
+
+`registry-up` starts a host-local `registry:2` (`kind-registry`,
+`127.0.0.1:5001`), and a containerd mirror patch in `kind.yml` maps
+`localhost:5001` to `kind-registry:5000` in-network, so nodes pull from the same
+registry and pulls stay off the external network. It must be up before the
+cluster is created, or the mirror patch does not resolve.
+
+Claude is authenticated into the config layer at build time, taken unattended
+from the host's own credential where one exists and from a throwaway login
+container otherwise. A session that finds no authentication fails rather than
+prompting.
+
+## Use
+
+```sh
+$ make
+$ make session-create
+$ make session-attach
+$ make session-attach SESSION=brave-amber-otter-lantern
+$ make session-ls
+$ make session-ls SESSION_STOPPED=1
+$ make session-stop SESSION=brave-amber-otter-lantern
+$ make session-rename SESSION=brave-amber-otter-lantern SESSION_NEW=review-work
+$ make session-update-config
+$ make session-rm SESSION=brave-amber-otter-lantern
+$ make cluster-down
+```
+
+A session is one StatefulSet at `replicas: 1`, named a random mnemonic
+(adjective-colour-creature-thing) so it can be said aloud and picked out of a
+list. Its whole `$HOME` is its own PVC, seeded once from the image at creation
+and never re-seeded. The container starts a detached `tmux` session, so closing
+the terminal detaches and leaves the agent running; `session-attach` reattaches.
+
+`session-stop` scales to 0, releasing cpu and memory while the PVC keeps the
+data; attaching to a stopped session scales it back to 1 and the same volume
+reattaches. `session-rm` deletes the StatefulSet **and** its PVC — a
+`volumeClaimTemplates` claim outlives its StatefulSet by design, so without that
+delete every removed session leaks its storage.
+
+`session-update-config` rebuilds the config layer and recreates running pods on
+it. Because a session's home is seeded once, an update reaches sessions created
+after it; an existing session keeps the configuration it was seeded with.
+
+## Traffic management
+
+Session egress is Cilium-enforced default-deny. `ci/k8s/netpol.yml` holds three
+objects: a namespace-wide default-deny over an empty `endpointSelector` (so it
+covers every pod, including one carrying the wrong labels), the `sandbox-egress`
+allowlist selecting session pods, and a clusterwide `egressDeny` on the host and
+remote-node entities, since Cilium does not deny the host by default.
+
+The allowlist admits cluster DNS (kube-dns, with resolution snooping so Cilium
+can match FQDNs) and a fixed set of domains on 443 TCP, plus gitlab on 22. Raw
+IPs, unknown domains and all plain HTTP on port 80 are dropped in-kernel; there
+is no port-80 rule anywhere, so HTTP is denied even for allowlisted domains.
+
+Cilium only enforces on an endpoint a policy actually selects, and an empty
+`egress: []` leaves it allow-all — which is why default-deny is written as a
+real rule. `session-create` refuses to run unless the policy is applied and
+Cilium is ready, so no session exists in a window where egress is unenforced.
+
+Cilium images pull from quay.io at install time (`cilium-up`), so cluster
+bootstrap needs network.
+
+**Extend the allowlist:** add one `matchName`/`matchPattern` line under
+`toFQDNs` in the `sandbox-egress` policy and the matching DNS rule, then
+`make netpol-up`.
+
+**Observe egress:** `hubble observe --verdict DROPPED` names the session, the
+destination and the port for a denied attempt, so a missing rule is diagnosable.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
