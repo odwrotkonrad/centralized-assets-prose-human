@@ -9,7 +9,7 @@ genericSetup:
     autoDiscover: false
   include:
     profiles:
-      - source: "git::gitlab.com/konradodwrot/centralized/assets/generic@${{ var.CENTRALIZED_ASSETS_GENERIC_REF }}"
+      - source: "git::https://gitlab.com/konradodwrot/centralized/assets/generic@${{ var.CENTRALIZED_ASSETS_GENERIC_REF }}"
         spec: consumer-repo-config
         profile: setup
         variables:
