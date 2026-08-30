@@ -341,6 +341,19 @@ variablesDefinitions:
 
 A profile may carry its own `variablesDefinitions` (same shape as one
 `profilesVariablesDefinitions` entry) instead. Both for one profile: error.
+A third sibling, `all`, sets `scope` and `required` once for every
+definition of the spec, spec and profile level alike; a definition setting
+the key itself wins (`required: false` opts one name out):
+
+```yaml
+variablesDefinitions:
+  all: {scope: recursiveSpecsAndProfiles, required: true}
+  specVariablesDefinitions:
+    PROSE_ASSETS_REF: {}
+    MISC_REF: {}
+    OPTIONAL_REF: {required: false}
+```
+
 Definitions are never interpolated. Per name:
 
 - `required` (bool): a value must exist after resolution, else a hard error
