@@ -61,7 +61,9 @@ repo-relative dest, an `@`-include and a `localFile` path resolve against the
 git root of the invoking spec, so a sub-spec under `.che/` and a composed or
 sourced spec alike render onto the repo that runs them.
 `--profiles` names a profile of the invoked spec or of any spec it composes,
-remote ones included.
+remote ones included. With `--profiles` naming only profiles the invoked spec
+defines (none of them including a composed profile by bare name),
+`specsInclude` is not loaded.
 Outside a git repo the root is the nearest ancestor holding `che.yml` or
 `.che/che.yml`. The same lookup applies to every included spec
 (`specsInclude` dirs, `git::` clones, `specDirPath` dirs). `.env` is not
@@ -382,6 +384,12 @@ embedded spec, `variables` is an explicit pass (see [scope](#scope)). A
 composed spec keeps its own anchor, files and profile eligibility. Its profile
 names become referenceable from this spec's `include.profiles` (bare-name
 collisions error). Duplicates and cycles load once. Recursive.
+When a che spec includes another spec, and a che profile is specified and
+located at the top-level spec, the included spec's absence MUST NOT block
+executing the selected profile: with `--profiles` naming only profiles the
+invoked spec defines (none of them including a composed profile by bare name),
+`specsInclude` is not loaded. `optional` governs discovery and any run that
+composes.
 
 ## Interpolation
 
