@@ -9,4 +9,7 @@ dependsOn:
   devEnv:
     - uri: gitlab.com/konradodwrot/go-modules/che-schema
       type: file
+  repoContents:
+    - uri: gitlab.com/konradodwrot/centralized/assets/prose/ai
+      type: gitRepository
 ##[<] 🤖
