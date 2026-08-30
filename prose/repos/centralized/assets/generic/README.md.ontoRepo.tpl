@@ -15,7 +15,7 @@ che-install:
 	@curl -fsSL https://konradodwrot.gitlab.io/go-modules/che-install.sh | sh -s -- --skip-if-present-is-newer
 
 generic-setup:
-	@$${CHE_BIN:-che} render-templates --profiles=genericSetup
+	@$${BIN_CHE:-che} render-templates --profiles=genericSetup
 
 shared/generic/make/generic.mk: generic-setup
 ```
