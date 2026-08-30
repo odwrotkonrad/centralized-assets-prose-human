@@ -60,9 +60,9 @@ scripts and `profileWorkingDirectory` against the spec's checkout; a
 repo-relative dest, an `@`-include and a `localFile` path resolve against the
 git root of the spec, so a sub-spec under `.che/` renders onto the repo.
 `--profiles` names a profile of the invoked spec or of any spec it composes,
-remote ones included. `specsInclude` is lazy-loaded: with `--profiles` naming
-only profiles the invoked spec defines (none of them including a composed
-profile by bare name), the embedded specs are never loaded.
+remote ones included. With `--profiles` naming only profiles the invoked spec
+defines (none of them including a composed profile by bare name),
+`specsInclude` is not loaded.
 Outside a git repo the root is the nearest ancestor holding `che.yml` or
 `.che/che.yml`. The same lookup applies to every included spec
 (`specsInclude` dirs, `git::` clones, `specDirPath` dirs). `.env` is not
@@ -389,10 +389,10 @@ names become referenceable from this spec's `include.profiles` (bare-name
 collisions error). Duplicates and cycles load once. Recursive.
 When a che spec includes another spec, and a che profile is specified and
 located at the top-level spec, the included spec's absence MUST NOT block
-executing the selected profile. Lazy loading: with `--profiles` naming only
-profiles the invoked spec defines (none of them including a composed profile
-by bare name), the embedded specs are never loaded. `optional` governs
-discovery and any run that composes.
+executing the selected profile: with `--profiles` naming only profiles the
+invoked spec defines (none of them including a composed profile by bare name),
+`specsInclude` is not loaded. `optional` governs discovery and any run that
+composes.
 
 ## Interpolation
 
