@@ -14,10 +14,10 @@ Each repo declares its own surface in `.repo/cross-repo-interface.yml`: `upstrea
 
 ## Events
 
-Every sender reaches this repo through `cross-repo/misc`'s `TriggerAutomation` CI template, forwarding one JSON `AUTOMATION_EVENT` (`type`, `source`, `details`). `dispatch-event` runs `bin/automation dispatch`, a Ruby dispatcher picking a handler by `type` and emitting the regen child pipeline (`lib/automation/`, minitest under `test/`, `make test`):
+Every sender reaches this repo through `centralized/assets/generic`'s `EmitEvents` CI template, forwarding one JSON `AUTOMATION_EVENT` (`type`, `source`, `details`). `dispatch-event` runs `bin/automation dispatch`, a Ruby dispatcher picking a handler by `type` and emitting the regen child pipeline (`lib/automation/`, minitest under `test/`, `make test`):
 
-- `release.published` (`details: producer, artifact`, the tag is `source.ref`): one pin regen per repo whose graph `edges` map the released artifact into a `ci-var/<name>` artifact it publishes (iac's interface: `cross-repo/prose/assets/repo-prose: [ci-var/prose-assets-ref]`), raising the `<NAME>` tfvars line. No edge: the dispatch fails.
-- `ci-var.changed` (`details: variables: [{key, from, to}]`, sent by iac's main apply): for each changed `GRP_KO_VAR_<NAME>` published by such an edge, one content regen per consumer of the edge's source, rendered with `<NAME>` at the new value.
+- `artifact.released` (`details: artifact, version, prev`): one `vars-write` raising the artifact's producer variable in ci-variables, consumer pins kept at `max(held, declared)`.
+- `ci-variable.updated` (`details: variables: [{key, from, to}]`, sent by ci-variables' main apply from its producers diff): one lockfile MR (`.repo/upstream.env`, che renders the rest) per consumer of the moved artifact, a rebuild for consumers whose own artifact depends on it, record-only otherwise.
 
 Nothing about producers, variables or iac is hardcoded: the graph's `ci-var/*` edges decide what a release pins and what a variable regenerates.
 
