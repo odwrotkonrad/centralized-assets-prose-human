@@ -1,0 +1,8 @@
+ontoRepo:
+  options:
+    autoDiscover: true
+  include:
+    renderTemplates:
+      - source: templates/2-data/makefile-agents.md.ontoRepo.tpl
+        dest:
+          - path: assets/data/makefile.agents.md

@@ -1,0 +1,59 @@
+##[>] 🤖🤖
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+stages:
+  - validate
+
+variables:
+  ARTIFACT_REGISTRY: $GRP_KO_VAR_ARTIFACT_REGISTRY
+  ARTIFACT_REGISTRY_PROXY_DOCKERHUB: $GRP_KO_VAR_ARTIFACT_REGISTRY_PROXY_DOCKERHUB
+  CI_IMAGES_REF: $GRP_KO_VAR_CI_IMAGES_REF
+  CI_IMAGE: $ARTIFACT_REGISTRY/ci-linux:$CI_IMAGES_REF
+  CI_IMAGE_DIND: $ARTIFACT_REGISTRY/ci-linux-dind:$CI_IMAGES_REF
+
+default:
+  image: $CI_IMAGE
+  tags:
+    - gke-linux-amd64
+
+validate-pre-commit-diff:
+  stage: validate
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    GIT_DEPTH: 0
+  script:
+    - make repo-ci-precommit-diff
+    - git diff --exit-code HEAD
+
+validate-pre-commit-all:
+  stage: validate
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+  script:
+    - make repo-ci-precommit-all
+    - git diff --exit-code HEAD
+
+build-image:
+  stage: validate
+  image: $CI_IMAGE_DIND
+  services:
+    - name: $ARTIFACT_REGISTRY_PROXY_DOCKERHUB/library/docker:dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: "1"
+    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+  script:
+    - docker build --build-arg "BASE_IMAGE=$ARTIFACT_REGISTRY_PROXY_DOCKERHUB/library/debian:bookworm-slim" --tag example:local .
+##[<] 🤖🤖

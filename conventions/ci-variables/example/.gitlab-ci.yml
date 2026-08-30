@@ -1,0 +1,49 @@
+##[>] 🤖🤖
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+stages:
+  - validate
+
+variables:
+  ARTIFACT_REGISTRY: $GRP_KO_VAR_ARTIFACT_REGISTRY
+  CI_IMAGES_REF: $GRP_KO_VAR_CI_IMAGES_REF
+  CHE_PACKAGES_REF: $GRP_KO_VAR_CHE_PACKAGES_REF
+  CI_IMAGE: $ARTIFACT_REGISTRY/ci-linux:$CI_IMAGES_REF
+
+default:
+  image: $CI_IMAGE
+  tags:
+    - gke-linux-amd64
+
+validate-pre-commit-diff:
+  stage: validate
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    GIT_DEPTH: 0
+  script:
+    - make repo-ci-precommit-diff
+    - git diff --exit-code HEAD
+
+read-only-check:
+  stage: validate
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    GITLAB_TOKEN: $REPO_UNPROTECTED_VAR_BOT_GITLAB_TOKEN
+  script:
+    - make check
+
+publish:
+  stage: validate
+  rules:
+    - if: $CI_COMMIT_TAG
+  variables:
+    GITLAB_TOKEN: $GRP_KO_PROTECTED_VAR_BOT_GITLAB_TOKEN
+    GOOGLE_CREDENTIALS: $REPO_PROTECTED_VAR_GOOGLE_CREDENTIALS
+  script:
+    - make publish
+##[<] 🤖🤖

@@ -1,0 +1,10 @@
+claude-agents:
+  options:
+    autoDiscover: true
+    runIf:
+      - builtin:isVirt
+  include:
+    profiles:
+      - source: "git::https://gitlab.com/konradodwrot/ai-harness/configs@${{ env.AI_CONFIGS_REF }}//profiles/claude/che.yml::claude/virt"
+        ctx:
+          repo: Notes
