@@ -1,35 +1,27 @@
 # yaml-language-server: $schema=https://gitlab.com/api/v4/projects/konradodwrot%2Fgo-modules/packages/generic/che-schema/v0.0.1-che-min-v0.0.96/che.schema.json
 ##[>] 🤖🤖
 specsInclude:
-  - specDirPath: ./shared/generic/che
-    optional: true
-
+  - url: gitlab.com/konradodwrot/centralized/assets/generic
+    ref: "${{ var.CENTRALIZED_ASSETS_GENERIC_REF }}"
+    specDirPath: consumer-repo-config
+    variables:
+      repo: centralized/assets/prose/human
 profilesDefinitions:
-  genericSetup:
+  generic/env:
     type: repo-git-untracked
-    options:
-      autoDiscover: false
     include:
-      profiles:
-        - url: https://gitlab.com/konradodwrot/centralized/assets/generic
-          ref: "${{ var.CENTRALIZED_ASSETS_GENERIC_REF }}"
-          specDirPath: consumer-repo-config
-          profileName: setup
-          variables:
-            repo: centralized/assets/prose/human
-
+      renderTemplates:
+        - source: tpl/repo-git-tracked/env.tpl
+          dest:
+            - path: .env
+              options:
+                writeType: mergeUpsert
 variablesDefinitions:
   specVariablesDefinitions:
+    CENTRALIZED_ASSETS_GENERIC_REF: {required: true, scope: recursiveSpecsAndProfiles}
     CENTRALIZED_ASSETS_PROSE_AI_REF: {required: true, scope: recursiveSpecsAndProfiles}
     CENTRALIZED_ASSETS_PROSE_COMMON_REF: {required: true, scope: recursiveSpecsAndProfiles}
     CENTRALIZED_ASSETS_PROSE_HUMAN_REF: {required: true, scope: recursiveSpecsAndProfiles}
-    CENTRALIZED_ASSETS_GENERIC_REF:
-      required: true
-      scope: recursiveSpecsAndProfiles
-    CHE_SCHEMA_REF:
-      required: true
-      scope: recursiveSpecsAndProfiles
-    OCI_IMAGES_CI_LINUX_REF:
-      required: true
-      scope: recursiveSpecsAndProfiles
+    CHE_SCHEMA_REF: {required: true, scope: recursiveSpecsAndProfiles}
+    OCI_IMAGES_CI_LINUX_REF: {required: true, scope: recursiveSpecsAndProfiles}
 ##[<] 🤖🤖
